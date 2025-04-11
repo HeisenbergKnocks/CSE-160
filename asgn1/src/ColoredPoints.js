@@ -98,9 +98,13 @@ function addActionsForHtmlUI() {
   document.getElementById("circleButton").onclick = function () {
     g_selectedType = CIRCLE;
   };
-  // NEW: Add a listener for the castle drawing button.
+  // A listener for the castle drawing button.
   document.getElementById("castleButton").onclick = function () {
     drawCastle();
+  };
+  // A listener for the animatedCastle drawing Button
+  document.getElementById("animatedCastleButton").onclick = function () {
+    drawAnimatedCastle();
   };
 
   //Color Slider Events
@@ -221,11 +225,4 @@ function sendTextToHTML(text, htmlID) {
     return;
   }
   htmlElm.innerHTML = text;
-}
-
-// Function to create and render the castle
-function drawCastle() {
-  let castle = new Castle();
-  g_shapesList.push(castle);
-  renderAllShapes();
 }
