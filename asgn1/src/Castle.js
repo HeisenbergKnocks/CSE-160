@@ -285,3 +285,10 @@ class Castle {
     }
   }
 }
+
+// Function to create and render the castle
+function drawCastle() {
+  let castle = new Castle();
+  g_shapesList.push(castle);
+  renderAllShapes();
+}
