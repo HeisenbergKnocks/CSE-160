@@ -233,54 +233,77 @@ function convertCoordinatesEventToGL(ev) {
 }
 
 function renderAllShapes() {
-  var startTime = performance.now();
-
-  /*
-  var len = g_shapesList.length;
-  for (var i = 0; i < len; i++) {
-    g_shapesList[i].render();
-    } */
-
-  //drawTriangle3D([-1.0, 0.0, 0.0, -0.5, -1.0, 0.0, 0.0, 0.0, 0.0]);
-
-  //Pass the matrix to u_ModelMatrix attribute
+  // Apply the global camera rotation
   var globalRotMat = new Matrix4().rotate(g_globalAngle, 0, 1, 0);
   gl.uniformMatrix4fv(u_GlobalRotateMatrix, false, globalRotMat.elements);
 
-  // Clear <canvas>
+  // Clear the canvas (color + depth)
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.clear(gl.COLOR_BUFFER_BIT);
 
-  //Draw a cube
+  // a convenient brown color for the monkey
+  const brown = [0.76, 0.55, 0.34, 1.0];
+
+  // ——— BODY ———
   var body = new Cube();
-  body.color = [1.0, 0.0, 0.0, 1.0];
-  body.matrix.translate(-0.25, -0.75, 0.0);
-  body.matrix.rotate(-5, 1, 0, 0);
-  body.matrix.scale(0.5, 0.3, 0.5);
+  body.color = brown;
+  body.matrix = new Matrix4(this.matrix);
+  body.matrix.setTranslate(-0.3, -0.2, 0.0);
+  body.matrix.scale(0.9, 0.5, 0.6);
   body.render();
 
-  //Draw a left arm
-  var yellow = new Cube();
-  yellow.color = [1, 1, 0, 1];
-  yellow.matrix.setTranslate(0, -0.5, 0);
-  yellow.matrix.rotate(-5, 1, 0, 0);
-  yellow.matrix.rotate(-g_yellowAngle, 0, 0, 1);
-  var yellowCoordinatesMat = new Matrix4(yellow.matrix);
-  yellow.matrix.scale(0.25, 0.7, 0.5);
-  yellow.matrix.translate(-0.5, 0, 0);
-  yellow.render();
+  // ——— HEAD ———
+  var head = new Cube();
+  head.color = brown;
+  head.matrix = new Matrix4(body.matrix);
+  head.matrix.setTranslate(0.3, 0.3, 0.05);
+  head.matrix.scale(0.4, 0.35, 0.5);
+  head.render();
 
-  //Test box
-  var magenta = new Cube();
-  magenta.color = [1, 0, 1, 1];
-  magenta.matrix = yellowCoordinatesMat;
-  magenta.matrix.translate(0, 0.65, 0);
-  magenta.matrix.rotate(g_magentaAngle, 0, 0, 1);
-  magenta.matrix.scale(0.3, 0.3, 0.3);
-  magenta.matrix.translate(-0.5, 0, -0.001);
-  magenta.render();
+  // ——— LEGS ———
+  // positions for front‐left, front‐right, back‐left, back‐right
+  // ——— LEGS ———
+  // ——— LEGS ———
+  const legOffsets = [
+    [+0.45, -0.5, +0.9], // front‑right
+    [-0.15, -0.5, +0.9], // back‑right
+    [+0.45, -0.5, -0.1], // front‑left
+    [-0.1, -0.5, -0.1], // back‑left
+  ];
 
-  var duration = performance.now() - startTime;
+  legOffsets.forEach(([x, y, z]) => {
+    const leg = new Cube();
+    leg.color = brown;
+    leg.matrix = new Matrix4(body.matrix);
+    // attach under and out at each corner
+    leg.matrix.translate(x, y, z);
+    // tall‐skinny prisms
+    leg.matrix.scale(0.25, 1.5, 0.15);
+    leg.render();
+  });
+
+  // ——— EARS ———
+  // two small blocks on the sides of the head
+  // ——— EARS ———
+  // two small blocks on the sides of the head
+  const earOffsets = [
+    [0.2, +0.225, 0.84], // right ear
+    [0.2, +0.225, -0.05], // left ear
+  ];
+
+  // a lighter‐brown color for the ears
+  const white = [1.0, 1.0, 1.0, 1.0];
+
+  earOffsets.forEach(([x, y, z]) => {
+    const ear = new Cube();
+    ear.color = white; // use the lighter shade here
+    ear.matrix = new Matrix4(head.matrix);
+    ear.matrix.translate(x, y, z);
+    ear.matrix.scale(0.4, 0.4, 0.2);
+    ear.render();
+  });
+
+  // (finally update your fps counter)
+  var duration = performance.now() - (performance.now() - g_seconds * 1000);
   sendTextToHTML(
     " ms: " +
       Math.floor(duration) +
