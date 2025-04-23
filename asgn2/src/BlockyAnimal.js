@@ -243,6 +243,9 @@ function renderAllShapes() {
 
   // a convenient brown color for the monkey
   const brown = [0.76, 0.55, 0.34, 1.0];
+  // a lighter brown color
+  const lightBrown = [0.85, 0.7, 0.5, 1.0];
+  const lighterBrown = [0.92, 0.8, 0.65, 1.0];
 
   // ——— BODY ———
   var body = new Cube();
@@ -260,18 +263,24 @@ function renderAllShapes() {
   head.matrix.scale(0.4, 0.35, 0.5);
   head.render();
 
+  // ——— FACE ———
+  var face = new Cube();
+  face.color = lighterBrown;
+  face.matrix = new Matrix4(head.matrix);
+  face.matrix.setTranslate(0.69, 0.3, 0.51);
+  face.matrix.rotate(90, 0, 1, 0);
+  face.matrix.scale(0.42, 0.3, 0.02);
+  face.render();
+
   // ——— LEGS ———
   // positions for front‐left, front‐right, back‐left, back‐right
-  // ——— LEGS ———
-  // ——— LEGS ———
+
   const legOffsets = [
     [+0.45, -0.5, +0.9], // front‑right
     [-0.15, -0.5, +0.9], // back‑right
     [+0.45, -0.5, -0.1], // front‑left
     [-0.1, -0.5, -0.1], // back‑left
   ];
-
-  const lightBrown = [0.85, 0.7, 0.5, 1.0];
 
   legOffsets.forEach(([x, y, z]) => {
     const leg = new Cube();
@@ -325,19 +334,48 @@ function renderAllShapes() {
   const purple = [0.6, 0.2, 0.8, 1.0];
   // same X/Y as the eyes, but Z a little further forward
   const pupilOffsets = [
-    [2, 2, 2], // right pupil
-    [2, 2, -2], // left  pupil
+    [1.1, 0.6, 0.75], // left pupil
+    [1.1, 0.6, 0.25], // right  pupil
   ];
 
   pupilOffsets.forEach(([x, y, z]) => {
-    const pupil = new Cube();
-    pupil.color = purple;
-    pupil.matrix = new Matrix4(head.matrix);
-    pupil.matrix.translate(x, y, z);
-    // very small, flat block
-    pupil.matrix.scale(1, 0.1, 0.05);
-    pupil.render();
+    const p = new Cylinder(); // 24 slices = nicely round
+    p.color = black;
+    p.matrix = new Matrix4(head.matrix); // start at head
+    p.matrix.translate(x, y, z); // move into eye position
+    p.matrix.rotate(-90, 0, 1, 0); // point its caps toward the camera
+    // scale to a small disk: radius ~0.05, thickness ~0.01
+    p.matrix.scale(0.125, 0.125, 0.125);
+    p.render();
   });
+
+  // UPPER STOUT
+  var head = new Cube();
+  head.color = lightBrown;
+  head.matrix = new Matrix4(head.matrix);
+  head.matrix.setTranslate(0.65, 0.375, 0.175);
+  head.matrix.scale(0.2, 0.1, 0.25);
+  head.render();
+
+  // ——— LOWER STOUT ———
+  const lowerStout = new Cube();
+  lowerStout.color = lightBrown;
+  lowerStout.matrix = new Matrix4(head.matrix);
+  lowerStout.matrix.setTranslate(0.65, 0.34, 0.175);
+  lowerStout.matrix.rotate(-12.5, 0, 0, 1);
+  lowerStout.matrix.scale(0.2, 0.05, 0.25);
+  lowerStout.render();
+
+  // ——— TONGUE ———
+  const tonguePink = [0.96, 0.65, 0.7, 1.0];
+
+  const tongue = new Cube();
+  tongue.color = tonguePink;
+  tongue.matrix = new Matrix4(head.matrix);
+  tongue.matrix.setTranslate(0.65, 0.39, 0.175);
+  tongue.matrix.rotate(-12.5, 0, 0, 1); // keep same
+  tongue.matrix.scale(0.2, 0.01, 0.25);
+  tongue.render();
 
   var duration = performance.now() - startTime;
   sendTextToHTML(

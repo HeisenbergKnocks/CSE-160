@@ -1,50 +1,60 @@
-/**
- * Very small helper primitive: a unit‑radius, unit‑height cylinder
- * centred at the origin.  Only the side wall is drawn because
- * we only need a neck / leg segment – feel free to add caps if desired.
- */
 class Cylinder {
-  constructor(segments = 24) {
+  constructor() {
     this.type = "cylinder";
-    this.color = [1, 1, 1, 1]; // default white
+    this.color = [1.0, 1.0, 1.0, 1.0];
+
+    // Model matrix for translating, rotating, scaling the unit cylinder
     this.matrix = new Matrix4();
-    this.segments = segments; // number of vertical slices
+
+    // How many slices around the circumference
+    this.segments = 30;
+
+    // Height of the cylinder along the z–axis (unit = 1)
+    this.height = 1.0;
   }
 
-  /** Draws the cylinder using your existing drawTriangle3D(). */
   render() {
-    // per‑object uniforms
-    gl.uniform4f(
-      u_FragColor,
-      this.color[0],
-      this.color[1],
-      this.color[2],
-      this.color[3],
-    );
+    const rgba = this.color;
+
+    // Pass color and model matrix to the shader
+    gl.uniform4f(u_FragColor, rgba[0], rgba[1], rgba[2], rgba[3]);
     gl.uniformMatrix4fv(u_ModelMatrix, false, this.matrix.elements);
 
-    const TWO_PI = Math.PI * 2;
-    const r = 0.5; // radius (before model‑matrix scale)
+    const n = this.segments;
+    const h = this.height;
+    const angleStep = (2 * Math.PI) / n;
 
-    /* ---- side wall: one quad (two triangles) per segment ---- */
-    for (let i = 0; i < this.segments; ++i) {
-      const a0 = (i / this.segments) * TWO_PI;
-      const a1 = ((i + 1) / this.segments) * TWO_PI;
+    for (let i = 0; i < n; i++) {
+      const θ1 = i * angleStep;
+      const θ2 = (i + 1) * angleStep;
 
-      const x0 = r * Math.cos(a0),
-        z0 = r * Math.sin(a0);
-      const x1 = r * Math.cos(a1),
-        z1 = r * Math.sin(a1);
+      // Unit‐radius circle in XY, scaled to radius 0.5 for a nicer default
+      const x1 = Math.cos(θ1) * 0.5,
+        y1 = Math.sin(θ1) * 0.5;
+      const x2 = Math.cos(θ2) * 0.5,
+        y2 = Math.sin(θ2) * 0.5;
 
-      // upper and lower y‑coordinates (unit height)
-      const yTop = 0.5;
-      const yBot = -0.5;
+      // —— Top cap (z = h)
+      drawTriangle3D([
+        0,
+        0,
+        h, // center
+        x1,
+        y1,
+        h,
+        x2,
+        y2,
+        h,
+      ]);
 
-      /* first triangle of the quad */
-      drawTriangle3D([x0, yTop, z0, x0, yBot, z0, x1, yTop, z1]);
+      // —— Bottom cap (z = 0) — flip winding so normal points down
+      drawTriangle3D([0, 0, 0, x2, y2, 0, x1, y1, 0]);
 
-      /* second triangle of the quad */
-      drawTriangle3D([x1, yTop, z1, x0, yBot, z0, x1, yBot, z1]);
+      // —— Side (first half)
+      drawTriangle3D([x1, y1, 0, x1, y1, h, x2, y2, h]);
+
+      // —— Side (second half)
+      drawTriangle3D([x1, y1, 0, x2, y2, h, x2, y2, 0]);
     }
   }
 }
