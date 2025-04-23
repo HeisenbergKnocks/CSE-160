@@ -255,6 +255,13 @@ function renderAllShapes() {
   body.matrix.scale(0.9, 0.5, 0.6);
   body.render();
 
+  // ——— WOOL ———
+  var wool = new Cube();
+  wool.matrix = new Matrix4(this.matrix);
+  wool.matrix.setTranslate(-0.49, -0.25, -0.08);
+  wool.matrix.scale(1.1, 0.6, 0.75);
+  wool.render();
+
   // ——— HEAD ———
   var head = new Cube();
   head.color = brown;
@@ -276,10 +283,10 @@ function renderAllShapes() {
   // positions for front‐left, front‐right, back‐left, back‐right
 
   const legOffsets = [
-    [+0.45, -0.5, +0.9], // front‑right
-    [-0.15, -0.5, +0.9], // back‑right
-    [+0.45, -0.5, -0.1], // front‑left
-    [-0.1, -0.5, -0.1], // back‑left
+    [+0.55, -0.5, +0.8], // front‑right
+    [-0.05, -0.5, +0.8], // back‑right
+    [+0.55, -0.5, -0.07], // front‑left
+    [-0.05, -0.5, -0.07], // back‑left
   ];
 
   legOffsets.forEach(([x, y, z]) => {
@@ -289,7 +296,7 @@ function renderAllShapes() {
     // attach under and out at each corner
     leg.matrix.translate(x, y, z);
     // tall‐skinny prisms
-    leg.matrix.scale(0.25, 1.5, 0.15);
+    leg.matrix.scale(0.25, 1.5, 0.25);
     leg.render();
   });
 
