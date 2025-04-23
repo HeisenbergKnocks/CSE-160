@@ -270,9 +270,11 @@ function renderAllShapes() {
     [-0.1, -0.5, -0.1], // back‑left
   ];
 
+  const lightBrown = [0.85, 0.7, 0.5, 1.0];
+
   legOffsets.forEach(([x, y, z]) => {
     const leg = new Cube();
-    leg.color = brown;
+    leg.color = lightBrown;
     leg.matrix = new Matrix4(body.matrix);
     // attach under and out at each corner
     leg.matrix.translate(x, y, z);
@@ -293,14 +295,14 @@ function renderAllShapes() {
   // a lighter‐brown color for the ears
   const white = [1.0, 1.0, 1.0, 1.0];
 
-  earOffsets.forEach(([x, y, z]) => {
+  for (let off of earOffsets) {
     const ear = new Cube();
-    ear.color = white; // use the lighter shade here
-    ear.matrix = new Matrix4(head.matrix);
-    ear.matrix.translate(x, y, z);
-    ear.matrix.scale(0.4, 0.4, 0.2);
+    ear.color = white;
+    ear.matrix = new Matrix4(head.matrix)
+      .translate(off[0], off[1], off[2])
+      .scale(0.4, 0.4, 0.2);
     ear.render();
-  });
+  }
 
   // (finally update your fps counter)
   var duration = performance.now() - (performance.now() - g_seconds * 1000);
