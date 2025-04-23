@@ -233,6 +233,7 @@ function convertCoordinatesEventToGL(ev) {
 }
 
 function renderAllShapes() {
+  var startTime = performance.now();
   // Apply the global camera rotation
   var globalRotMat = new Matrix4().rotate(g_globalAngle, 0, 1, 0);
   gl.uniformMatrix4fv(u_GlobalRotateMatrix, false, globalRotMat.elements);
@@ -298,14 +299,47 @@ function renderAllShapes() {
   for (let off of earOffsets) {
     const ear = new Cube();
     ear.color = white;
-    ear.matrix = new Matrix4(head.matrix)
-      .translate(off[0], off[1], off[2])
-      .scale(0.4, 0.4, 0.2);
+    ear.matrix = new Matrix4(head.matrix);
+    ear.matrix.translate(off[0], off[1], off[2]);
+    ear.matrix.scale(0.4, 0.4, 0.2);
     ear.render();
   }
 
-  // (finally update your fps counter)
-  var duration = performance.now() - (performance.now() - g_seconds * 1000);
+  // ——— EYES ———
+  const eyeOffsets = [
+    [0.75, 0.5, 0.6], // right
+    [0.75, 0.5, 0.1], // left
+  ];
+
+  for (let off of eyeOffsets) {
+    const eye = new Cube();
+    eye.color = [1, 1, 1, 1];
+    eye.matrix = new Matrix4(head.matrix);
+    eye.matrix.translate(off[0], off[1], off[2]);
+    eye.matrix.scale(0.3, 0.3, 0.3);
+    eye.render();
+  }
+
+  // ——— PUPILS ———
+  const black = [0.0, 0.0, 0.0, 1.0];
+  const purple = [0.6, 0.2, 0.8, 1.0];
+  // same X/Y as the eyes, but Z a little further forward
+  const pupilOffsets = [
+    [2, 2, 2], // right pupil
+    [2, 2, -2], // left  pupil
+  ];
+
+  pupilOffsets.forEach(([x, y, z]) => {
+    const pupil = new Cube();
+    pupil.color = purple;
+    pupil.matrix = new Matrix4(head.matrix);
+    pupil.matrix.translate(x, y, z);
+    // very small, flat block
+    pupil.matrix.scale(1, 0.1, 0.05);
+    pupil.render();
+  });
+
+  var duration = performance.now() - startTime;
   sendTextToHTML(
     " ms: " +
       Math.floor(duration) +
