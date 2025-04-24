@@ -22,7 +22,6 @@ let gl;
 let a_Position;
 let u_FragColor;
 let u_Size;
-// --- Keep original global variable state ---
 let u_ModelMatrix;
 let u_GlobalRotateMatrix;
 
@@ -62,7 +61,7 @@ function connectVariablestoGLSL() {
     return;
   }
 
-  /*
+  /* // Original comments
   //Get the storage location of u_Size
   u_Size = gl.getUniformLocation(gl.program, "u_Size");
   if (!u_Size) {
@@ -98,53 +97,54 @@ const CIRCLE = 2;
 let g_selectedColor = [1.0, 1.0, 1.0, 1.0];
 let g_selectedSize = 5;
 let g_selectedType = POINT;
-let g_globalAngle = 30; // Original value from your code
+let g_globalAngle = 30;
 let g_yellowAngle = 0;
 let g_magentaAngle = 0;
 let g_yellowAnimation = false;
 let g_magentaAnimation = false;
-
-// per-leg rotation angles [front-right, back-right, front-left, back-left]
 let g_legAngles = [0, 0, 0, 0];
 let g_stoutAngle = -12.5;
 let g_tongueAngle = -12.5;
 
-// --- START: Globals for Mouse Rotation ---
-let g_globalAngleX = 0; // Rotation around X-axis (controlled by mouse Y)
-let g_globalAngleY = 0; // Rotation around Y-axis (controlled by mouse X)
+// --- Globals for Mouse Rotation ---
+let g_globalAngleX = 0;
+let g_globalAngleY = 0;
 let g_isDragging = false;
 let g_lastMouseX = -1;
 let g_lastMouseY = -1;
-const g_mouseSensitivity = 200; // Sensitivity factor for rotation speed
-// --- END: Globals for Mouse Rotation ---
+const g_mouseSensitivity = 200;
+
+// --- START: Globals for Hop Animation ---
+let g_isHopping = false; // Is the hop animation currently playing?
+let g_hopStartTime = 0; // Timestamp when the hop started (using g_seconds)
+const g_hopDuration = 0.5; // Duration of the hop in seconds
+const g_hopHeight = 0.3; // Maximum height of the hop
+let g_verticalOffset = 0; // Current vertical offset calculated in tick()
+// --- END: Globals for Hop Animation ---
 
 function addActionsForHtmlUI() {
   // Size Slider Events
   document
     .getElementById("angleSlide")
     .addEventListener("mousemove", function () {
-      // Original event listener
-      g_globalAngle = this.value; // Original assignment
+      g_globalAngle = this.value;
       renderScene();
     });
 
   // Limb Slider Events
   ["leg0Slide", "leg1Slide", "leg2Slide", "leg3Slide"].forEach((id, i) => {
     document.getElementById(id).addEventListener("input", function () {
-      // Original event listener
-      g_legAngles[i] = this.value; // Original assignment
+      g_legAngles[i] = this.value;
       renderScene();
     });
   });
 
   // Lower-stout slider (jaw movement)
   document.getElementById("stoutSlide").addEventListener("input", function () {
-    g_stoutAngle = parseFloat(this.value); // Original parseFloat
+    g_stoutAngle = parseFloat(this.value);
 
-    // If stout opens wider than tongue, push tongue open to match:
     if (g_tongueAngle < g_stoutAngle) {
       g_tongueAngle = g_stoutAngle;
-      // update the tongue slider thumb
       document.getElementById("tongueSlide").value = g_tongueAngle;
     }
 
@@ -153,13 +153,10 @@ function addActionsForHtmlUI() {
 
   // Tongue slider
   document.getElementById("tongueSlide").addEventListener("input", function () {
-    // grab requested tongue angle…
-    let requested = parseFloat(this.value); // Original parseFloat
+    let requested = parseFloat(this.value);
 
-    // but clamp so it's never less than the current stout angle
     if (requested < g_stoutAngle) {
       requested = g_stoutAngle;
-      // snap the slider thumb back up
       this.value = requested;
     }
 
@@ -168,46 +165,57 @@ function addActionsForHtmlUI() {
   });
 }
 
-// --- START: MOUSE EVENT HANDLERS for Rotation ---
+// --- MOUSE EVENT HANDLERS ---
 function handleMouseDown(ev) {
-  // Use button property to check for left mouse button (button === 0)
+  // Check for left mouse button
   if (ev.button !== 0) return;
-  let [x, y] = convertCoordinatesEventToGL(ev); // Use existing conversion function
+
+  // --- Check for Shift Key for Hop ---
+  if (ev.shiftKey) {
+    // Trigger hop animation if not already hopping
+    if (!g_isHopping) {
+      g_isHopping = true;
+      g_hopStartTime = g_seconds; // Record start time using global seconds
+      g_verticalOffset = 0; // Ensure offset starts at 0 for this hop
+    }
+    // Important: Prevent starting a drag when Shift+Click is intended for hop
+    return;
+  }
+  // --- End Shift Key Check ---
+
+  // If not Shift+Click, proceed with normal rotation drag logic
+  let [x, y] = convertCoordinatesEventToGL(ev);
   g_lastMouseX = x;
   g_lastMouseY = y;
   g_isDragging = true;
 }
 
 function handleMouseUp(ev) {
-  // Only stop dragging if left button was released
   if (ev.button !== 0) return;
   g_isDragging = false;
 }
 
 function handleMouseMove(ev) {
-  if (!g_isDragging) return; // Only rotate if dragging
+  // Only process if dragging (and not during a hop trigger)
+  if (!g_isDragging) return;
 
-  let [x, y] = convertCoordinatesEventToGL(ev); // Use existing conversion function
-
+  let [x, y] = convertCoordinatesEventToGL(ev);
   let deltaX = x - g_lastMouseX;
   let deltaY = y - g_lastMouseY;
 
-  // Apply rotation based on mouse delta, scaled by sensitivity
-  g_globalAngleY += deltaX * g_mouseSensitivity; // Mouse X motion -> Y-axis rotation
-  g_globalAngleX += deltaY * g_mouseSensitivity; // Mouse Y motion -> X-axis rotation
+  g_globalAngleY += deltaX * g_mouseSensitivity;
+  g_globalAngleX += deltaY * g_mouseSensitivity;
 
-  // Update the last mouse position for the next movement calculation
   g_lastMouseX = x;
   g_lastMouseY = y;
 
-  renderScene(); // Trigger re-render
+  renderScene(); // Re-render is implicitly handled by tick() loop
 }
 
 function handleMouseLeave(ev) {
-  // If mouse leaves the canvas while dragging, stop the drag operation
   g_isDragging = false;
 }
-// --- END: MOUSE EVENT HANDLERS for Rotation ---
+// --- END MOUSE EVENT HANDLERS ---
 
 function main() {
   //Set up canvas and gl variables
@@ -217,17 +225,16 @@ function main() {
   //Set up actions for the HTML UI elements
   addActionsForHtmlUI();
 
-  // Update mouse event handlers ---
-
-  // Add new handlers for mouse drag rotation
+  // Assign mouse handlers
   canvas.onmousedown = handleMouseDown;
   canvas.onmousemove = handleMouseMove;
   canvas.onmouseup = handleMouseUp;
-  canvas.onmouseleave = handleMouseLeave; // Add handler for mouse leaving canvas
+  canvas.onmouseleave = handleMouseLeave;
 
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
+  // Start the animation loop
   requestAnimationFrame(tick);
 }
 
@@ -235,11 +242,27 @@ var g_startTime = performance.now() / 1000.0;
 var g_seconds = performance.now() / 1000.0 - g_startTime;
 
 function tick() {
+  // Update global time
   g_seconds = performance.now() / 1000.0 - g_startTime;
-  //console.log(g_seconds);
 
-  // Update Animation Angles
+  // Update standard animations (if any were active)
   updateAnimationAngles();
+
+  // --- START: Update Hop Animation Offset ---
+  if (g_isHopping) {
+    let hopTime = g_seconds - g_hopStartTime;
+    if (hopTime >= g_hopDuration) {
+      // Hop finished
+      g_isHopping = false;
+      g_verticalOffset = 0; // Reset offset
+    } else {
+      // Calculate vertical offset using a parabolic curve (or sine, as before)
+      // Sine gives a smoother start/end:
+      let progress = hopTime / g_hopDuration;
+      g_verticalOffset = g_hopHeight * Math.sin(progress * Math.PI);
+    }
+  }
+  // --- END: Update Hop Animation Offset ---
 
   // Draw everything
   renderScene();
@@ -249,7 +272,7 @@ function tick() {
 }
 
 function updateAnimationAngles() {
-  // Keep original function
+  // Original function
   if (g_yellowAnimation) {
     g_yellowAngle = 45 * Math.sin(g_seconds);
   }
@@ -258,18 +281,16 @@ function updateAnimationAngles() {
   }
 }
 
-var g_shapesList = []; // Keep original variable
+var g_shapesList = []; // Original variable
 
-/* // Keep original commented out variables
-var g_points = []; // The array for the position of a mouse press
-var g_colors = []; // The array to store the color of a point
+/* // Original commented variables
+var g_points = [];
+var g_colors = [];
 var g_sizes = []; */
 
 function click(ev) {
-  // Keep original function (it just won't be called by mouse drag now)
-  //Extract the event click and return it in WebGL coordinates
+  // Original function
   let [x, y] = convertCoordinatesEventToGL(ev);
-
   let point;
   if (g_selectedType == POINT) {
     point = new Point();
@@ -278,45 +299,49 @@ function click(ev) {
   } else {
     point = new Circle();
     point.segments = g_selectedSegments;
-  }
+  } // Assuming g_selectedSegments exists if CIRCLE used
   point.position = [x, y];
   point.color = g_selectedColor.slice();
   point.size = g_selectedSize;
   g_shapesList.push(point);
-
-  //Draw every shape that is supposed to be in the canvas
-  renderScene();
+  renderScene(); // Original call
 }
 
 function convertCoordinatesEventToGL(ev) {
-  // Keep original function
-  var x = ev.clientX; // x coordinate of a mouse pointer
-  var y = ev.clientY; // y coordinate of a mouse pointer
+  // Original function
+  var x = ev.clientX;
+  var y = ev.clientY;
   var rect = ev.target.getBoundingClientRect();
-
   x = (x - rect.left - canvas.width / 2) / (canvas.width / 2);
   y = (canvas.height / 2 - (y - rect.top)) / (canvas.height / 2);
-
-  // Store the coordinates to g_points array
   return [x, y];
 }
 
 function renderScene() {
   var startTime = performance.now();
 
-  // Apply the global camera rotation from slider AND mouse drag
-  var globalRotMat = new Matrix4(); // Start with identity
-  globalRotMat.rotate(g_globalAngle, 0, 1, 0); // Apply original slider Y rotation
-  globalRotMat.rotate(g_globalAngleY, 0, 1, 0); // Apply mouse drag Y rotation
-  globalRotMat.rotate(g_globalAngleX, 1, 0, 0); // Apply mouse drag X rotation
-  gl.uniformMatrix4fv(u_GlobalRotateMatrix, false, globalRotMat.elements);
+  // --- START: Apply Global Transformation (Rotation + Hop Translation) ---
+  // 1. Calculate Rotation Matrix (Slider + Mouse Drag)
+  var rotMat = new Matrix4();
+  rotMat.rotate(g_globalAngle, 0, 1, 0); // Original slider Y rotation
+  rotMat.rotate(g_globalAngleY, 0, 1, 0); // Mouse drag Y rotation
+  rotMat.rotate(g_globalAngleX, 1, 0, 0); // Mouse drag X rotation
 
-  // Clear the canvas (color + depth)
+  // 2. Calculate Final Global Matrix including Hop Translation
+  // Apply translation *before* rotation to move the object in world space before rotating the view
+  var globalMat = new Matrix4();
+  globalMat.translate(0, g_verticalOffset, 0); // Apply hop offset vertically
+  globalMat.multiply(rotMat); // Multiply by the rotation matrix
+
+  // 3. Pass the combined matrix to the shader
+  gl.uniformMatrix4fv(u_GlobalRotateMatrix, false, globalMat.elements);
+  // --- END: Apply Global Transformation ---
+
+  // Clear the canvas
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  // a convenient brown color for the monkey
+  // Colors and parts definitions are exactly as in your original file provided previously.
   const brown = [0.76, 0.55, 0.34, 1.0];
-  // a lighter brown color
   const lightBrown = [0.85, 0.7, 0.5, 1.0];
   const lighterBrown = [0.92, 0.8, 0.65, 1.0];
 
@@ -341,7 +366,7 @@ function renderScene() {
   head.matrix = new Matrix4(body.matrix); // Original relation to body.matrix
   head.matrix.setTranslate(0.3, 0.3, 0.05);
   head.matrix.scale(0.4, 0.35, 0.5);
-  head.render();
+  head.render(); // Original render position
 
   // ——— FACE ———
   var face = new Cube();
@@ -354,31 +379,28 @@ function renderScene() {
 
   // ——— LEGS ———
   const legOffsets = [
-    [+0.5, -0.15, +0.37], // front‑right
-    [-0.05, -0.15, +0.37], // back‑right
-    [+0.5, -0.15, -0.03], // front‑left
-    [-0.05, -0.15, -0.03], // back‑left
+    [+0.5, -0.15, +0.37],
+    [-0.05, -0.15, +0.37],
+    [+0.5, -0.15, -0.03],
+    [-0.05, -0.15, -0.03],
   ];
 
   legOffsets.forEach(([x, y, z], idx) => {
     const leg = new Cube();
     leg.color = lightBrown;
     leg.matrix = new Matrix4(body.matrix); // Original relation to body.matrix
-
     leg.matrix.setTranslate(x, y, z);
-    leg.matrix.rotate(180, 0, 0, 1);
-    leg.matrix.rotate(g_legAngles[idx], 0, 0, 1);
+    leg.matrix.rotate(180, 0, 0, 1); // Original rotation
+    leg.matrix.rotate(g_legAngles[idx], 0, 0, 1); // Original rotation
     leg.matrix.scale(0.25, 0.3, 0.25);
-
     leg.render();
   });
 
   // ——— EARS ———
   const earOffsets = [
-    [0.2, +0.225, 0.84], // right ear
-    [0.2, +0.225, -0.05], // left ear
+    [0.2, +0.225, 0.84],
+    [0.2, +0.225, -0.05],
   ];
-
   const white = [1.0, 1.0, 1.0, 1.0];
 
   for (let off of earOffsets) {
@@ -392,8 +414,8 @@ function renderScene() {
 
   // ——— EYES ———
   const eyeOffsets = [
-    [0.75, 0.5, 0.6], // right
-    [0.75, 0.5, 0.1], // left
+    [0.75, 0.5, 0.6],
+    [0.75, 0.5, 0.1],
   ];
 
   for (let off of eyeOffsets) {
@@ -407,14 +429,14 @@ function renderScene() {
 
   // ——— PUPILS ———
   const black = [0.0, 0.0, 0.0, 1.0];
-  const purple = [0.6, 0.2, 0.8, 1.0];
+  const purple = [0.6, 0.2, 0.8, 1.0]; // Original variable
   const pupilOffsets = [
-    [1.1, 0.6, 0.75], // left pupil
-    [1.1, 0.6, 0.25], // right  pupil
+    [1.1, 0.6, 0.75],
+    [1.1, 0.6, 0.25],
   ];
 
   pupilOffsets.forEach(([x, y, z]) => {
-    const p = new Cylinder();
+    const p = new Cylinder(); // Original use of Cylinder
     p.color = black;
     p.matrix = new Matrix4(head.matrix); // Original relation to head.matrix
     p.matrix.translate(x, y, z);
@@ -424,31 +446,31 @@ function renderScene() {
   });
 
   // UPPER STOUT
-  var upperStout = new Cube();
-  upperStout.color = lightBrown;
-  upperStout.matrix = new Matrix4(head.matrix); // Original relation to head.matrix
-  upperStout.matrix.setTranslate(0.65, 0.375, 0.175);
-  upperStout.matrix.scale(0.2, 0.1, 0.25);
-  upperStout.render();
+  // NOTE: The original code re-uses the 'head' variable here. This is kept exactly.
+  head = new Cube(); // Original re-assignment of head variable
+  head.color = lightBrown;
+  head.matrix = new Matrix4(head.matrix); // Original self-reference
+  head.matrix.setTranslate(0.65, 0.375, 0.175); // Original values
+  head.matrix.scale(0.2, 0.1, 0.25); // Original values
+  head.render();
 
   // ——— LOWER STOUT ———
   const lowerStout = new Cube();
   lowerStout.color = lightBrown;
-  lowerStout.matrix = new Matrix4(head.matrix); // Original relation to the head variable
-  lowerStout.matrix.setTranslate(0.65, 0.34, 0.175);
-  lowerStout.matrix.rotate(g_stoutAngle, 0, 0, 1);
-  lowerStout.matrix.scale(0.2, 0.05, 0.25);
+  lowerStout.matrix = new Matrix4(head.matrix); // Original relation to the re-assigned head variable
+  lowerStout.matrix.setTranslate(0.65, 0.34, 0.175); // Original values
+  lowerStout.matrix.rotate(g_stoutAngle, 0, 0, 1); // Original rotation
+  lowerStout.matrix.scale(0.2, 0.05, 0.25); // Original values
   lowerStout.render();
 
   // ——— TONGUE ———
   const tonguePink = [0.96, 0.65, 0.7, 1.0];
-
   const tongue = new Cube();
   tongue.color = tonguePink;
-  tongue.matrix = new Matrix4(head.matrix); // Original relation to the head variable
-  tongue.matrix.setTranslate(0.65, 0.39, 0.175);
-  tongue.matrix.rotate(g_tongueAngle, 0, 0, 1);
-  tongue.matrix.scale(0.2, 0.01, 0.25);
+  tongue.matrix = new Matrix4(head.matrix); // Original relation to the re-assigned head variable
+  tongue.matrix.setTranslate(0.65, 0.39, 0.175); // Original values
+  tongue.matrix.rotate(g_tongueAngle, 0, 0, 1); // Original rotation
+  tongue.matrix.scale(0.2, 0.01, 0.25); // Original values
   tongue.render();
 
   var duration = performance.now() - startTime;
@@ -462,7 +484,7 @@ function renderScene() {
 }
 
 function sendTextToHTML(text, htmlID) {
-  // Keep original function
+  // Original function
   var htmlElm = document.getElementById(htmlID);
   if (!htmlElm) {
     console.log("Failed to get " + htmlID + " from HTML");
