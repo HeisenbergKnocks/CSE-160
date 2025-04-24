@@ -22,6 +22,9 @@ let gl;
 let a_Position;
 let u_FragColor;
 let u_Size;
+// --- Keep original global variable state ---
+let u_ModelMatrix;
+let u_GlobalRotateMatrix;
 
 function setupWebGL() {
   // Retrieve <canvas> element
@@ -95,52 +98,116 @@ const CIRCLE = 2;
 let g_selectedColor = [1.0, 1.0, 1.0, 1.0];
 let g_selectedSize = 5;
 let g_selectedType = POINT;
-let g_globalAngle = 0;
+let g_globalAngle = 30; // Original value from your code
 let g_yellowAngle = 0;
 let g_magentaAngle = 0;
 let g_yellowAnimation = false;
 let g_magentaAnimation = false;
 
+// per-leg rotation angles [front-right, back-right, front-left, back-left]
+let g_legAngles = [0, 0, 0, 0];
+let g_stoutAngle = -12.5;
+let g_tongueAngle = -12.5;
+
+// --- START: Globals for Mouse Rotation ---
+let g_globalAngleX = 0; // Rotation around X-axis (controlled by mouse Y)
+let g_globalAngleY = 0; // Rotation around Y-axis (controlled by mouse X)
+let g_isDragging = false;
+let g_lastMouseX = -1;
+let g_lastMouseY = -1;
+const g_mouseSensitivity = 200; // Sensitivity factor for rotation speed
+// --- END: Globals for Mouse Rotation ---
+
 function addActionsForHtmlUI() {
-  // Button Events
-  document.getElementById("animationYellowOffButton").onclick = function () {
-    g_yellowAnimation = false;
-  };
-  document.getElementById("animationYellowOnButton").onclick = function () {
-    g_yellowAnimation = true;
-  };
-
-  document.getElementById("animationMagentaOffButton").onclick = function () {
-    g_magentaAnimation = false;
-  };
-
-  document.getElementById("animationMagentaOnButton").onclick = function () {
-    g_magentaAnimation = true;
-  };
-
-  // Color Slider Events
-  document
-    .getElementById("yellowSlide")
-    .addEventListener("mousemove", function () {
-      g_yellowAngle = this.value;
-      renderAllShapes();
-    });
-
-  document
-    .getElementById("magentaSlide")
-    .addEventListener("mousemove", function () {
-      g_magentaAngle = this.value;
-      renderAllShapes();
-    });
-
   // Size Slider Events
   document
     .getElementById("angleSlide")
     .addEventListener("mousemove", function () {
-      g_globalAngle = this.value;
-      renderAllShapes();
+      // Original event listener
+      g_globalAngle = this.value; // Original assignment
+      renderScene();
     });
+
+  // Limb Slider Events
+  ["leg0Slide", "leg1Slide", "leg2Slide", "leg3Slide"].forEach((id, i) => {
+    document.getElementById(id).addEventListener("input", function () {
+      // Original event listener
+      g_legAngles[i] = this.value; // Original assignment
+      renderScene();
+    });
+  });
+
+  // Lower-stout slider (jaw movement)
+  document.getElementById("stoutSlide").addEventListener("input", function () {
+    g_stoutAngle = parseFloat(this.value); // Original parseFloat
+
+    // If stout opens wider than tongue, push tongue open to match:
+    if (g_tongueAngle < g_stoutAngle) {
+      g_tongueAngle = g_stoutAngle;
+      // update the tongue slider thumb
+      document.getElementById("tongueSlide").value = g_tongueAngle;
+    }
+
+    renderScene();
+  });
+
+  // Tongue slider
+  document.getElementById("tongueSlide").addEventListener("input", function () {
+    // grab requested tongue angle…
+    let requested = parseFloat(this.value); // Original parseFloat
+
+    // but clamp so it's never less than the current stout angle
+    if (requested < g_stoutAngle) {
+      requested = g_stoutAngle;
+      // snap the slider thumb back up
+      this.value = requested;
+    }
+
+    g_tongueAngle = requested;
+    renderScene();
+  });
 }
+
+// --- START: MOUSE EVENT HANDLERS for Rotation ---
+function handleMouseDown(ev) {
+  // Use button property to check for left mouse button (button === 0)
+  if (ev.button !== 0) return;
+  let [x, y] = convertCoordinatesEventToGL(ev); // Use existing conversion function
+  g_lastMouseX = x;
+  g_lastMouseY = y;
+  g_isDragging = true;
+}
+
+function handleMouseUp(ev) {
+  // Only stop dragging if left button was released
+  if (ev.button !== 0) return;
+  g_isDragging = false;
+}
+
+function handleMouseMove(ev) {
+  if (!g_isDragging) return; // Only rotate if dragging
+
+  let [x, y] = convertCoordinatesEventToGL(ev); // Use existing conversion function
+
+  let deltaX = x - g_lastMouseX;
+  let deltaY = y - g_lastMouseY;
+
+  // Apply rotation based on mouse delta, scaled by sensitivity
+  g_globalAngleY += deltaX * g_mouseSensitivity; // Mouse X motion -> Y-axis rotation
+  g_globalAngleX += deltaY * g_mouseSensitivity; // Mouse Y motion -> X-axis rotation
+
+  // Update the last mouse position for the next movement calculation
+  g_lastMouseX = x;
+  g_lastMouseY = y;
+
+  renderScene(); // Trigger re-render
+}
+
+function handleMouseLeave(ev) {
+  // If mouse leaves the canvas while dragging, stop the drag operation
+  g_isDragging = false;
+}
+// --- END: MOUSE EVENT HANDLERS for Rotation ---
 
 function main() {
   //Set up canvas and gl variables
@@ -150,19 +217,17 @@ function main() {
   //Set up actions for the HTML UI elements
   addActionsForHtmlUI();
 
-  // Register function (event handler) to be called on a mouse press
-  canvas.onmousedown = click;
-  canvas.onmousemove = function (ev) {
-    if (ev.buttons == 1) {
-      click(ev);
-    }
-  };
+  // Update mouse event handlers ---
+
+  // Add new handlers for mouse drag rotation
+  canvas.onmousedown = handleMouseDown;
+  canvas.onmousemove = handleMouseMove;
+  canvas.onmouseup = handleMouseUp;
+  canvas.onmouseleave = handleMouseLeave; // Add handler for mouse leaving canvas
 
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
-  // Clear <canvas>
-  //renderAllShapes();
   requestAnimationFrame(tick);
 }
 
@@ -177,13 +242,14 @@ function tick() {
   updateAnimationAngles();
 
   // Draw everything
-  renderAllShapes();
+  renderScene();
 
   // Tell the browser to update again when it has time
   requestAnimationFrame(tick);
 }
 
 function updateAnimationAngles() {
+  // Keep original function
   if (g_yellowAnimation) {
     g_yellowAngle = 45 * Math.sin(g_seconds);
   }
@@ -192,13 +258,15 @@ function updateAnimationAngles() {
   }
 }
 
-var g_shapesList = [];
-/*
+var g_shapesList = []; // Keep original variable
+
+/* // Keep original commented out variables
 var g_points = []; // The array for the position of a mouse press
 var g_colors = []; // The array to store the color of a point
 var g_sizes = []; */
 
 function click(ev) {
+  // Keep original function (it just won't be called by mouse drag now)
   //Extract the event click and return it in WebGL coordinates
   let [x, y] = convertCoordinatesEventToGL(ev);
 
@@ -217,10 +285,11 @@ function click(ev) {
   g_shapesList.push(point);
 
   //Draw every shape that is supposed to be in the canvas
-  renderAllShapes();
+  renderScene();
 }
 
 function convertCoordinatesEventToGL(ev) {
+  // Keep original function
   var x = ev.clientX; // x coordinate of a mouse pointer
   var y = ev.clientY; // y coordinate of a mouse pointer
   var rect = ev.target.getBoundingClientRect();
@@ -232,10 +301,14 @@ function convertCoordinatesEventToGL(ev) {
   return [x, y];
 }
 
-function renderAllShapes() {
+function renderScene() {
   var startTime = performance.now();
-  // Apply the global camera rotation
-  var globalRotMat = new Matrix4().rotate(g_globalAngle, 0, 1, 0);
+
+  // Apply the global camera rotation from slider AND mouse drag
+  var globalRotMat = new Matrix4(); // Start with identity
+  globalRotMat.rotate(g_globalAngle, 0, 1, 0); // Apply original slider Y rotation
+  globalRotMat.rotate(g_globalAngleY, 0, 1, 0); // Apply mouse drag Y rotation
+  globalRotMat.rotate(g_globalAngleX, 1, 0, 0); // Apply mouse drag X rotation
   gl.uniformMatrix4fv(u_GlobalRotateMatrix, false, globalRotMat.elements);
 
   // Clear the canvas (color + depth)
@@ -250,14 +323,14 @@ function renderAllShapes() {
   // ——— BODY ———
   var body = new Cube();
   body.color = brown;
-  body.matrix = new Matrix4(this.matrix);
+  body.matrix = new Matrix4(this.matrix); // Original use of this.matrix
   body.matrix.setTranslate(-0.3, -0.2, 0.0);
   body.matrix.scale(0.9, 0.5, 0.6);
   body.render();
 
   // ——— WOOL ———
   var wool = new Cube();
-  wool.matrix = new Matrix4(this.matrix);
+  wool.matrix = new Matrix4(this.matrix); // Original use of this.matrix
   wool.matrix.setTranslate(-0.49, -0.25, -0.08);
   wool.matrix.scale(1.1, 0.6, 0.75);
   wool.render();
@@ -265,7 +338,7 @@ function renderAllShapes() {
   // ——— HEAD ———
   var head = new Cube();
   head.color = brown;
-  head.matrix = new Matrix4(body.matrix);
+  head.matrix = new Matrix4(body.matrix); // Original relation to body.matrix
   head.matrix.setTranslate(0.3, 0.3, 0.05);
   head.matrix.scale(0.4, 0.35, 0.5);
   head.render();
@@ -273,49 +346,45 @@ function renderAllShapes() {
   // ——— FACE ———
   var face = new Cube();
   face.color = lighterBrown;
-  face.matrix = new Matrix4(head.matrix);
+  face.matrix = new Matrix4(head.matrix); // Original relation to head.matrix
   face.matrix.setTranslate(0.69, 0.3, 0.51);
   face.matrix.rotate(90, 0, 1, 0);
   face.matrix.scale(0.42, 0.3, 0.02);
   face.render();
 
   // ——— LEGS ———
-  // positions for front‐left, front‐right, back‐left, back‐right
-
   const legOffsets = [
-    [+0.55, -0.5, +0.8], // front‑right
-    [-0.05, -0.5, +0.8], // back‑right
-    [+0.55, -0.5, -0.07], // front‑left
-    [-0.05, -0.5, -0.07], // back‑left
+    [+0.5, -0.15, +0.37], // front‑right
+    [-0.05, -0.15, +0.37], // back‑right
+    [+0.5, -0.15, -0.03], // front‑left
+    [-0.05, -0.15, -0.03], // back‑left
   ];
 
-  legOffsets.forEach(([x, y, z]) => {
+  legOffsets.forEach(([x, y, z], idx) => {
     const leg = new Cube();
     leg.color = lightBrown;
-    leg.matrix = new Matrix4(body.matrix);
-    // attach under and out at each corner
-    leg.matrix.translate(x, y, z);
-    // tall‐skinny prisms
-    leg.matrix.scale(0.25, 1.5, 0.25);
+    leg.matrix = new Matrix4(body.matrix); // Original relation to body.matrix
+
+    leg.matrix.setTranslate(x, y, z);
+    leg.matrix.rotate(180, 0, 0, 1);
+    leg.matrix.rotate(g_legAngles[idx], 0, 0, 1);
+    leg.matrix.scale(0.25, 0.3, 0.25);
+
     leg.render();
   });
 
   // ——— EARS ———
-  // two small blocks on the sides of the head
-  // ——— EARS ———
-  // two small blocks on the sides of the head
   const earOffsets = [
     [0.2, +0.225, 0.84], // right ear
     [0.2, +0.225, -0.05], // left ear
   ];
 
-  // a lighter‐brown color for the ears
   const white = [1.0, 1.0, 1.0, 1.0];
 
   for (let off of earOffsets) {
     const ear = new Cube();
     ear.color = white;
-    ear.matrix = new Matrix4(head.matrix);
+    ear.matrix = new Matrix4(head.matrix); // Original relation to head.matrix
     ear.matrix.translate(off[0], off[1], off[2]);
     ear.matrix.scale(0.4, 0.4, 0.2);
     ear.render();
@@ -330,7 +399,7 @@ function renderAllShapes() {
   for (let off of eyeOffsets) {
     const eye = new Cube();
     eye.color = [1, 1, 1, 1];
-    eye.matrix = new Matrix4(head.matrix);
+    eye.matrix = new Matrix4(head.matrix); // Original relation to head.matrix
     eye.matrix.translate(off[0], off[1], off[2]);
     eye.matrix.scale(0.3, 0.3, 0.3);
     eye.render();
@@ -339,37 +408,35 @@ function renderAllShapes() {
   // ——— PUPILS ———
   const black = [0.0, 0.0, 0.0, 1.0];
   const purple = [0.6, 0.2, 0.8, 1.0];
-  // same X/Y as the eyes, but Z a little further forward
   const pupilOffsets = [
     [1.1, 0.6, 0.75], // left pupil
     [1.1, 0.6, 0.25], // right  pupil
   ];
 
   pupilOffsets.forEach(([x, y, z]) => {
-    const p = new Cylinder(); // 24 slices = nicely round
+    const p = new Cylinder();
     p.color = black;
-    p.matrix = new Matrix4(head.matrix); // start at head
-    p.matrix.translate(x, y, z); // move into eye position
-    p.matrix.rotate(-90, 0, 1, 0); // point its caps toward the camera
-    // scale to a small disk: radius ~0.05, thickness ~0.01
+    p.matrix = new Matrix4(head.matrix); // Original relation to head.matrix
+    p.matrix.translate(x, y, z);
+    p.matrix.rotate(-90, 0, 1, 0);
     p.matrix.scale(0.125, 0.125, 0.125);
     p.render();
   });
 
   // UPPER STOUT
-  var head = new Cube();
-  head.color = lightBrown;
-  head.matrix = new Matrix4(head.matrix);
-  head.matrix.setTranslate(0.65, 0.375, 0.175);
-  head.matrix.scale(0.2, 0.1, 0.25);
-  head.render();
+  var upperStout = new Cube();
+  upperStout.color = lightBrown;
+  upperStout.matrix = new Matrix4(head.matrix); // Original relation to head.matrix
+  upperStout.matrix.setTranslate(0.65, 0.375, 0.175);
+  upperStout.matrix.scale(0.2, 0.1, 0.25);
+  upperStout.render();
 
   // ——— LOWER STOUT ———
   const lowerStout = new Cube();
   lowerStout.color = lightBrown;
-  lowerStout.matrix = new Matrix4(head.matrix);
+  lowerStout.matrix = new Matrix4(head.matrix); // Original relation to the head variable
   lowerStout.matrix.setTranslate(0.65, 0.34, 0.175);
-  lowerStout.matrix.rotate(-12.5, 0, 0, 1);
+  lowerStout.matrix.rotate(g_stoutAngle, 0, 0, 1);
   lowerStout.matrix.scale(0.2, 0.05, 0.25);
   lowerStout.render();
 
@@ -378,9 +445,9 @@ function renderAllShapes() {
 
   const tongue = new Cube();
   tongue.color = tonguePink;
-  tongue.matrix = new Matrix4(head.matrix);
+  tongue.matrix = new Matrix4(head.matrix); // Original relation to the head variable
   tongue.matrix.setTranslate(0.65, 0.39, 0.175);
-  tongue.matrix.rotate(-12.5, 0, 0, 1); // keep same
+  tongue.matrix.rotate(g_tongueAngle, 0, 0, 1);
   tongue.matrix.scale(0.2, 0.01, 0.25);
   tongue.render();
 
@@ -395,6 +462,7 @@ function renderAllShapes() {
 }
 
 function sendTextToHTML(text, htmlID) {
+  // Keep original function
   var htmlElm = document.getElementById(htmlID);
   if (!htmlElm) {
     console.log("Failed to get " + htmlID + " from HTML");

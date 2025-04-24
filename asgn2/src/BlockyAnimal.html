@@ -15,47 +15,6 @@
         <!-- Row 2: Dot Counter -->
         <p id="numdot">XXX</p>
 
-        <!-- Removed Clear and Drawing Mode Buttons -->
-
-        <!-- Row 3: Color Sliders -->
-        <div style="margin-bottom: 10px">
-            <label for="redSlide">Red</label>
-            <input
-                type="range"
-                min="0"
-                max="100"
-                value="100"
-                class="slider"
-                id="redSlide"
-            />
-
-            <label for="yellowSlide" style="margin-left: 20px">Yellow</label>
-            <input
-                type="range"
-                min="-45"
-                max="45"
-                value="0"
-                class="slider"
-                id="yellowSlide"
-            />
-
-            <button type="button" id="animationYellowOnButton">ON</button>
-            <button type="button" id="animationYellowOffButton">OFF</button>
-
-            <label for="magentaSlide" style="margin-left: 20px">Magenta</label>
-            <input
-                type="range"
-                min="-45"
-                max="45"
-                value="0"
-                class="slider"
-                id="magentaSlide"
-            />
-
-            <button type="button" id="animationMagentaOnButton">ON</button>
-            <button type="button" id="animationMagentaOffButton">OFF</button>
-        </div>
-
         <!-- Row 4: Camera Angle -->
         <div style="margin-bottom: 10px">
             <label for="angleSlide">Camera Angle</label>
@@ -63,9 +22,95 @@
                 type="range"
                 min="0"
                 max="360"
-                value="90"
+                value="30"
                 class="slider"
                 id="angleSlide"
+            />
+        </div>
+
+        <!-- Row 5: Leg Sliders (flex layout to keep them aligned) -->
+        <div
+            style="
+                display: flex;
+                gap: 30px;
+                align-items: center;
+                margin-bottom: 10px;
+            "
+        >
+            <span style="display: flex; align-items: center; gap: 8px">
+                <label for="leg0Slide">Front-Left Leg</label>
+                <input
+                    type="range"
+                    min="-25"
+                    max="20"
+                    value="0"
+                    class="slider"
+                    id="leg0Slide"
+                />
+            </span>
+
+            <span style="display: flex; align-items: center; gap: 8px">
+                <label for="leg1Slide">Back-Left Leg</label>
+                <input
+                    type="range"
+                    min="-25"
+                    max="20"
+                    value="0"
+                    class="slider"
+                    id="leg1Slide"
+                />
+            </span>
+
+            <span style="display: flex; align-items: center; gap: 8px">
+                <label for="leg2Slide">Front-Right Leg</label>
+                <input
+                    type="range"
+                    min="-25"
+                    max="20"
+                    value="0"
+                    class="slider"
+                    id="leg2Slide"
+                />
+            </span>
+
+            <span style="display: flex; align-items: center; gap: 8px">
+                <label for="leg3Slide">Back-Right Leg</label>
+                <input
+                    type="range"
+                    min="-25"
+                    max="20"
+                    value="0"
+                    class="slider"
+                    id="leg3Slide"
+                />
+            </span>
+        </div>
+
+        <!-- Row 6: Lower-Stout (Jaw) Slider -->
+        <div style="margin-bottom: 10px">
+            <label for="stoutSlide">Lower Stout Angle</label>
+            <input
+                type="range"
+                id="stoutSlide"
+                class="slider"
+                min="-35"
+                max="-6"
+                step="0.1"
+                value="-12.5"
+            />
+        </div>
+
+        <!-- Row 7: Tongue Slider -->
+        <div style="margin-bottom: 10px">
+            <label for="tongueSlide">Tongue Angle</label>
+            <input
+                type="range"
+                id="tongueSlide"
+                class="slider"
+                min="-35"
+                max="-6"
+                step="0.1"
+                value="-12.5"
             />
         </div>
 
