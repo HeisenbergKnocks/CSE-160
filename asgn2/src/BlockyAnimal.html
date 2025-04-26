@@ -22,7 +22,7 @@
                 type="range"
                 min="0"
                 max="360"
-                value="30"
+                value="45"
                 class="slider"
                 id="angleSlide"
             />
@@ -38,7 +38,7 @@
             "
         >
             <span style="display: flex; align-items: center; gap: 8px">
-                <label for="leg0Slide">Front-Left Leg</label>
+                <label for="leg0Slide">Front-Right Leg</label>
                 <input
                     type="range"
                     min="-25"
@@ -50,7 +50,7 @@
             </span>
 
             <span style="display: flex; align-items: center; gap: 8px">
-                <label for="leg1Slide">Back-Left Leg</label>
+                <label for="leg1Slide">Back-Right Leg</label>
                 <input
                     type="range"
                     min="-25"
@@ -62,7 +62,7 @@
             </span>
 
             <span style="display: flex; align-items: center; gap: 8px">
-                <label for="leg2Slide">Front-Right Leg</label>
+                <label for="leg2Slide">Front-Left Leg</label>
                 <input
                     type="range"
                     min="-25"
@@ -74,7 +74,7 @@
             </span>
 
             <span style="display: flex; align-items: center; gap: 8px">
-                <label for="leg3Slide">Back-Right Leg</label>
+                <label for="leg3Slide">Back-Left Leg</label>
                 <input
                     type="range"
                     min="-25"
@@ -84,6 +84,19 @@
                     id="leg3Slide"
                 />
             </span>
+        </div>
+
+        <!-- Head slider in the body of BlockyAnimal.html -->
+        <div style="margin-bottom: 10px">
+            <label for="headTiltSlide">Head Tilt (Side-to-Side)</label>
+            <input
+                type="range"
+                min="-7"
+                max="25"
+                value="0"
+                class="slider"
+                id="headTiltSlide"
+            />
         </div>
 
         <!-- Row 6: Lower-Stout (Jaw) Slider -->
@@ -107,7 +120,7 @@
                 type="range"
                 id="tongueSlide"
                 class="slider"
-                min="-35"
+                min="-32"
                 max="-6"
                 step="0.1"
                 value="-12.5"

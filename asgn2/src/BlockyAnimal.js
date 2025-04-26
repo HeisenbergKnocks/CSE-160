@@ -105,6 +105,7 @@ let g_magentaAnimation = false; // Original unused animation flags
 let g_legAngles = [0, 0, 0, 0]; // Indices: 0:FL, 1:BL, 2:FR, 3:BR (Matches HTML Slider IDs)
 let g_stoutAngle = -12.5;
 let g_tongueAngle = -12.5;
+let g_headTiltAngle = 0;
 
 // --- Globals for Mouse Rotation ---
 let g_globalAngleX = 0;
@@ -121,9 +122,8 @@ const g_hopDuration = 0.5;
 const g_hopHeight = 0.3;
 let g_verticalOffset = 0;
 
-// --- START: Global for Walk Animation ---
+// Global for Walk Animation ---
 let g_walkingAnimation = false; // Animation state flag
-// --- END: Global for Walk Animation ---
 
 function addActionsForHtmlUI() {
   // Size Slider Events
@@ -167,12 +167,19 @@ function addActionsForHtmlUI() {
     renderScene();
   });
 
-  // --- START: Add Walk Button Listener ---
+  // Add Walk Button Listener ---
   document.getElementById("walkButton").onclick = function () {
     g_walkingAnimation = !g_walkingAnimation; // Toggle the flag
     // When turning off, legs keep their last animated position
   };
-  // --- END: Add Walk Button Listener ---
+
+  // Head Slider
+  document
+    .getElementById("headTiltSlide")
+    .addEventListener("input", function () {
+      g_headTiltAngle = this.value;
+      renderScene();
+    });
 }
 
 // --- MOUSE EVENT HANDLERS (Unchanged from previous step) ---
@@ -377,6 +384,7 @@ function renderScene() {
   head.color = brown;
   head.matrix = new Matrix4(body.matrix);
   head.matrix.setTranslate(0.3, 0.3, 0.05);
+  head.matrix.rotate(g_headTiltAngle, 0, 1, 0);
   head.matrix.scale(0.4, 0.35, 0.5);
   head.render();
 
@@ -384,9 +392,9 @@ function renderScene() {
   var face = new Cube();
   face.color = lighterBrown;
   face.matrix = new Matrix4(head.matrix);
-  face.matrix.setTranslate(0.69, 0.3, 0.51);
+  face.matrix.translate(0.99, 0, 0.95);
   face.matrix.rotate(90, 0, 1, 0);
-  face.matrix.scale(0.42, 0.3, 0.02);
+  face.matrix.scale(0.9, 0.9, 0.02);
   face.render();
 
   // ——— LEGS ———
@@ -460,20 +468,20 @@ function renderScene() {
   });
 
   // UPPER STOUT
-  head = new Cube(); // Original re-assignment
-  head.color = lightBrown;
-  head.matrix = new Matrix4(head.matrix); // Original self-reference
-  head.matrix.setTranslate(0.65, 0.375, 0.175);
-  head.matrix.scale(0.2, 0.1, 0.25);
-  head.render();
+  upperStout = new Cube(); // Original re-assignment
+  upperStout.color = lightBrown;
+  upperStout.matrix = new Matrix4(head.matrix);
+  upperStout.matrix.translate(1, 0.2, 0.25);
+  upperStout.matrix.scale(0.39, 0.28, 0.5);
+  upperStout.render();
 
   // ——— LOWER STOUT ———
-  const lowerStout = new Cube();
+  lowerStout = new Cube();
   lowerStout.color = lightBrown;
   lowerStout.matrix = new Matrix4(head.matrix); // Original relation
-  lowerStout.matrix.setTranslate(0.65, 0.34, 0.175);
+  lowerStout.matrix.translate(0.955, 0.12, 0.25); // keep x and z same from above
   lowerStout.matrix.rotate(g_stoutAngle, 0, 0, 1);
-  lowerStout.matrix.scale(0.2, 0.05, 0.25);
+  lowerStout.matrix.scale(0.415, 0.14, 0.5); // keep x and z same from above
   lowerStout.render();
 
   // ——— TONGUE ———
@@ -481,9 +489,9 @@ function renderScene() {
   const tongue = new Cube();
   tongue.color = tonguePink;
   tongue.matrix = new Matrix4(head.matrix); // Original relation
-  tongue.matrix.setTranslate(0.65, 0.39, 0.175);
+  tongue.matrix.translate(0.955, 0.25, 0.25);
   tongue.matrix.rotate(g_tongueAngle, 0, 0, 1);
-  tongue.matrix.scale(0.2, 0.01, 0.25);
+  tongue.matrix.scale(0.425, 0.028, 0.5);
   tongue.render();
 
   var duration = performance.now() - startTime;
