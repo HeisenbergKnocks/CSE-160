@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Change a point color</title>
+    </head>
+    <body onload="main()">
+        <!-- Row 1: Canvas -->
+        <div style="margin-bottom: 10px">
+            <canvas id="webgl" width="600" height="600">
+                Please use a browser that supports "canvas"
+            </canvas>
+        </div>
+
+        <!-- Row 2: Dot Counter -->
+        <p id="numdot">XXX</p>
+
+        <!-- Row 4: Camera Angle -->
+        <div style="margin-bottom: 10px">
+            <label for="angleSlide">Camera Angle</label>
+            <input
+                type="range"
+                min="0"
+                max="360"
+                value="45"
+                class="slider"
+                id="angleSlide"
+            />
+        </div>
+
+        <!-- Row 5: Leg Sliders (flex layout to keep them aligned) -->
+        <div
+            style="
+                display: flex;
+                gap: 30px;
+                align-items: center;
+                margin-bottom: 10px;
+            "
+        >
+            <span style="display: flex; align-items: center; gap: 8px">
+                <label for="leg0Slide">Front-Right Leg</label>
+                <input
+                    type="range"
+                    min="-25"
+                    max="20"
+                    value="0"
+                    class="slider"
+                    id="leg0Slide"
+                />
+            </span>
+
+            <span style="display: flex; align-items: center; gap: 8px">
+                <label for="leg1Slide">Back-Right Leg</label>
+                <input
+                    type="range"
+                    min="-25"
+                    max="20"
+                    value="0"
+                    class="slider"
+                    id="leg1Slide"
+                />
+            </span>
+
+            <span style="display: flex; align-items: center; gap: 8px">
+                <label for="leg2Slide">Front-Left Leg</label>
+                <input
+                    type="range"
+                    min="-25"
+                    max="20"
+                    value="0"
+                    class="slider"
+                    id="leg2Slide"
+                />
+            </span>
+
+            <span style="display: flex; align-items: center; gap: 8px">
+                <label for="leg3Slide">Back-Left Leg</label>
+                <input
+                    type="range"
+                    min="-25"
+                    max="20"
+                    value="0"
+                    class="slider"
+                    id="leg3Slide"
+                />
+            </span>
+        </div>
+
+        <!-- Head slider in the body of BlockyAnimal.html -->
+        <div style="margin-bottom: 10px">
+            <label for="headTiltSlide">Head Tilt (Side-to-Side)</label>
+            <input
+                type="range"
+                min="-7"
+                max="25"
+                value="0"
+                class="slider"
+                id="headTiltSlide"
+            />
+        </div>
+
+        <!-- Row 6: Lower-Stout (Jaw) Slider -->
+        <div style="margin-bottom: 10px">
+            <label for="stoutSlide">Lower Stout Angle</label>
+            <input
+                type="range"
+                id="stoutSlide"
+                class="slider"
+                min="-35"
+                max="-6"
+                step="0.1"
+                value="-12.5"
+            />
+        </div>
+
+        <!-- Row 7: Tongue Slider -->
+        <div style="margin-bottom: 10px">
+            <label for="tongueSlide">Tongue Angle</label>
+            <input
+                type="range"
+                id="tongueSlide"
+                class="slider"
+                min="-32"
+                max="-6"
+                step="0.1"
+                value="-12.5"
+            />
+        </div>
+
+        <!-- Walk Animation Button -->
+        <div style="margin-top: 10px">
+            <button id="walkButton">Toggle Walk Animation</button>
+        </div>
+
+        <!-- Scripts -->
+        <script src="../lib/webgl-utils.js"></script>
+        <script src="../lib/webgl-debug.js"></script>
+        <script src="../lib/cuon-utils.js"></script>
+        <script src="../lib/cuon-matrix.js"></script>
+        <!-- <img src="../images/sky.jpg" alt="Sky background" /> -->
+        <script src="Triangle.js"></script>
+        <script src="Cube.js"></script>
+        <script src="Camera.js"></script>
+        <script src="World.js"></script>
+    </body>
+</html>
