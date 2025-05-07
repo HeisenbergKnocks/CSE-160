@@ -1,257 +1,150 @@
-// Camera.js — Implements a controllable perspective camera for the Blocky World
-// Dependencies: Vector3, Matrix4 (from cuon-matrix.js)
-
 class Camera {
-  /**
-   * @param {HTMLCanvasElement} canvas — the rendering canvas (for aspect ratio)
-   * @param {Object} [options] — optional overrides for initial parameters
-   */
-  constructor(canvas, options = {}) {
+  constructor(canvas, opts = {}) {
     this.canvas = canvas;
 
-    // Perspective parameters
-    this.fov = options.fov || 60.0;
-    this.near = options.near || 0.1;
-    this.far = options.far || 1000.0;
+    // frustum settings
+    this.fov = opts.fov ?? 60;
+    this.near = opts.near ?? 0.1;
+    this.far = opts.far ?? 1000;
 
-    // Camera coordinate frame
-    this.eye = new Vector3(options.eye || [0, 0.6, 5]);
-    this.at = new Vector3(options.at || [0, 0.6, 0]);
-    this.up = new Vector3(options.up || [0, 1, 0]);
+    // position & orientation
+    this.eye = new Vector3(opts.eye || [20, 10, 20]);
+    this.at = new Vector3(opts.at || [0, 0, 0]);
+    this.up = new Vector3(opts.up || [0, 5, 0]);
 
-    // Movement parameters
-    this.speed = options.speed || 0.1;
-    this.sensitivity = options.sensitivity || 0.005;
+    // movement & look sensitivity
+    this.speed = opts.speed ?? 0.1;
+    this.sensitivity = opts.sensitivity ?? 0.005;
 
-    // Matrices
+    // internal matrices
     this.viewMatrix = new Matrix4();
     this.projectionMatrix = new Matrix4();
 
-    // Initialize
     this.updateViewMatrix();
     this.updateProjectionMatrix();
   }
 
-  /** Recomputes the view matrix from current eye, at, up */
+  // Recalculate view based on eye, at, up
   updateViewMatrix() {
-    const e = this.eye.elements,
-      a = this.at.elements,
-      u = this.up.elements;
-
-    this.viewMatrix.setLookAt(
-      e[0],
-      e[1],
-      e[2],
-      a[0],
-      a[1],
-      a[2],
-      u[0],
-      u[1],
-      u[2],
-    );
+    const [ex, ey, ez] = this.eye.elements;
+    const [ax, ay, az] = this.at.elements;
+    const [ux, uy, uz] = this.up.elements;
+    this.viewMatrix.setLookAt(ex, ey, ez, ax, ay, az, ux, uy, uz);
   }
 
-  /** Recomputes the projection matrix from current canvas size & fov */
+  // Recalculate projection using canvas aspect ratio
   updateProjectionMatrix() {
     const aspect = this.canvas.width / this.canvas.height;
     this.projectionMatrix.setPerspective(this.fov, aspect, this.near, this.far);
   }
 
-  /** Move forward along the viewing direction */
-  moveForward() {
-    const e = this.eye.elements,
-      a = this.at.elements;
-    let dx = a[0] - e[0],
+  // Unit vector from eye toward at
+  getWorldDirection() {
+    const e = this.eye.elements;
+    const a = this.at.elements;
+    const dx = a[0] - e[0],
       dy = a[1] - e[1],
       dz = a[2] - e[2];
-    const len = Math.hypot(dx, dy, dz);
-    if (len > 0) {
-      const inv = this.speed / len;
-      dx *= inv;
-      dy *= inv;
-      dz *= inv;
-      e[0] += dx;
-      e[1] += dy;
-      e[2] += dz;
-      a[0] += dx;
-      a[1] += dy;
-      a[2] += dz;
-      this.updateViewMatrix();
-    }
+    const invLen = 1 / Math.hypot(dx, dy, dz);
+    return { x: dx * invLen, y: dy * invLen, z: dz * invLen };
   }
 
-  /** Move backward */
+  // advance toward at
+  moveForward() {
+    this._moveAlong(this.getWorldDirection());
+  }
+  // retreat from at
   moveBackward() {
-    const e = this.eye.elements,
-      a = this.at.elements;
-    let dx = e[0] - a[0],
-      dy = e[1] - a[1],
-      dz = e[2] - a[2];
-    const len = Math.hypot(dx, dy, dz);
-    if (len > 0) {
-      const inv = this.speed / len;
-      dx *= inv;
-      dy *= inv;
-      dz *= inv;
-      e[0] += dx;
-      e[1] += dy;
-      e[2] += dz;
-      a[0] += dx;
-      a[1] += dy;
-      a[2] += dz;
-      this.updateViewMatrix();
-    }
+    const dir = this.getWorldDirection();
+    this._moveAlong({ x: -dir.x, y: -dir.y, z: -dir.z });
   }
 
-  /** Strafe left (perpendicular to up × forward) */
+  // strafe: compute perpendicular direction via cross products
   moveLeft() {
-    const e = this.eye.elements,
-      a = this.at.elements,
-      u = this.up.elements;
-
-    // forward vector
-    const fx = a[0] - e[0],
-      fy = a[1] - e[1],
-      fz = a[2] - e[2];
-
-    // side = up × forward
-    let sx = u[1] * fz - u[2] * fy,
-      sy = u[2] * fx - u[0] * fz,
-      sz = u[0] * fy - u[1] * fx;
-
-    const slen = Math.hypot(sx, sy, sz);
-    if (slen > 0) {
-      const inv = this.speed / slen;
-      sx *= inv;
-      sy *= inv;
-      sz *= inv;
-      e[0] += sx;
-      e[1] += sy;
-      e[2] += sz;
-      a[0] += sx;
-      a[1] += sy;
-      a[2] += sz;
-      this.updateViewMatrix();
-    }
+    this._strafe(this.up, true);
   }
-
-  /** Strafe right (forward × up) */
   moveRight() {
-    const e = this.eye.elements,
-      a = this.at.elements,
-      u = this.up.elements;
-
-    // forward vector
-    const fx = a[0] - e[0],
-      fy = a[1] - e[1],
-      fz = a[2] - e[2];
-
-    // side = forward × up
-    let sx = fy * u[2] - fz * u[1],
-      sy = fz * u[0] - fx * u[2],
-      sz = fx * u[1] - fy * u[0];
-
-    const slen = Math.hypot(sx, sy, sz);
-    if (slen > 0) {
-      const inv = this.speed / slen;
-      sx *= inv;
-      sy *= inv;
-      sz *= inv;
-      e[0] += sx;
-      e[1] += sy;
-      e[2] += sz;
-      a[0] += sx;
-      a[1] += sy;
-      a[2] += sz;
-      this.updateViewMatrix();
-    }
+    this._strafe(this.up, false);
   }
 
-  /** Rotate around the world up axis (yaw) */
-  yaw(angleDeg) {
-    const e = this.eye.elements,
-      a = this.at.elements,
-      u = this.up.elements;
-
-    // forward vector
-    const fx = a[0] - e[0],
-      fy = a[1] - e[1],
-      fz = a[2] - e[2];
-
-    // build rotation
-    const rot = new Matrix4().setRotate(angleDeg, u[0], u[1], u[2]);
-    // rotate forward
-    const fp = rot
-      .multiplyVector3(new Vector3([fx, fy, fz]))
-      .normalize().elements;
-
-    // update look‑at
-    a[0] = e[0] + fp[0];
-    a[1] = e[1] + fp[1];
-    a[2] = e[2] + fp[2];
-
-    this.updateViewMatrix();
+  // yaw around global up axis
+  yaw(angle) {
+    this._rotateAxis(this.up.elements, angle);
   }
 
-  /** Rotate up/down around the side axis (pitch) */
-  pitch(angleDeg) {
-    const e = this.eye.elements,
-      a = this.at.elements,
-      u = this.up.elements;
-
-    // forward vector
-    const fx = a[0] - e[0],
-      fy = a[1] - e[1],
-      fz = a[2] - e[2];
-
+  // pitch around camera side axis
+  pitch(angle) {
+    const { x: fx, y: fy, z: fz } = this.getWorldDirection();
     // side axis = forward × up
-    let sx = fy * u[2] - fz * u[1],
-      sy = fz * u[0] - fx * u[2],
-      sz = fx * u[1] - fy * u[0];
-
-    const slen = Math.hypot(sx, sy, sz);
-    if (slen === 0) return;
-    sx /= slen;
-    sy /= slen;
-    sz /= slen;
-
-    // build rotation about side axis
-    const rot = new Matrix4().setRotate(angleDeg, sx, sy, sz);
-    // rotate forward
-    const fp = rot
-      .multiplyVector3(new Vector3([fx, fy, fz]))
-      .normalize().elements;
-
-    // update look‑at
-    a[0] = e[0] + fp[0];
-    a[1] = e[1] + fp[1];
-    a[2] = e[2] + fp[2];
-
-    // recompute up = side × forward
-    let ux = sy * fp[2] - sz * fp[1],
-      uy = sz * fp[0] - sx * fp[2],
-      uz = sx * fp[1] - sy * fp[0];
-
-    const ulen = Math.hypot(ux, uy, uz);
-    if (ulen > 0) {
-      u[0] = ux / ulen;
-      u[1] = uy / ulen;
-      u[2] = uz / ulen;
-    }
-
-    this.updateViewMatrix();
+    let sx = fy * this.up.elements[2] - fz * this.up.elements[1];
+    let sy = fz * this.up.elements[0] - fx * this.up.elements[2];
+    let sz = fx * this.up.elements[1] - fy * this.up.elements[0];
+    const len = Math.hypot(sx, sy, sz);
+    if (!len) return;
+    [sx, sy, sz] = [sx / len, sy / len, sz / len];
+    this._rotateAxis([sx, sy, sz], angle);
+    // update up = side × forward
+    const fp = this.getWorldDirection();
+    [this.up.elements[0], this.up.elements[1], this.up.elements[2]] = [
+      sy * fp.z - sz * fp.y,
+      sz * fp.x - sx * fp.z,
+      sx * fp.y - sy * fp.x,
+    ].map(
+      (v) =>
+        v /
+        Math.hypot(
+          sy * fp.z - sz * fp.y,
+          sz * fp.x - sx * fp.z,
+          sx * fp.y - sy * fp.x,
+        ),
+    );
   }
 
-  /**
-   * Handle mouse movement: dx, dy in pixels
-   */
+  // adjust look by mouse delta
   handleMouseMove(dx, dy) {
     this.yaw(dx * this.sensitivity);
     this.pitch(dy * this.sensitivity);
   }
 
-  /** Should be called on canvas resize */
+  // on canvas resize
   onResize() {
     this.updateProjectionMatrix();
+  }
+
+  // internal: move both eye & at by direction vector
+  _moveAlong({ x, y, z }) {
+    const inv = this.speed;
+    ["eye", "at"].forEach((prop) => {
+      const v = this[prop].elements;
+      v[0] += x * inv;
+      v[1] += y * inv;
+      v[2] += z * inv;
+    });
+    this.updateViewMatrix();
+  }
+
+  // internal: strafe left/right via cross-product
+  _strafe(upVec, left = true) {
+    const { x: fx, y: fy, z: fz } = this.getWorldDirection();
+    const [ux, uy, uz] = upVec.elements || upVec;
+    let sx = left ? uy * fz - uz * fy : fy * uz - fz * uy;
+    let sy = left ? uz * fx - ux * fz : fz * ux - fx * uz;
+    let sz = left ? ux * fy - uy * fx : fx * uy - fy * ux;
+    const len = Math.hypot(sx, sy, sz);
+    if (!len) return;
+    [sx, sy, sz] = [sx / len, sy / len, sz / len];
+    this._moveAlong({ x: sx, y: sy, z: sz });
+  }
+
+  // internal: rotate direction around axis
+  _rotateAxis(axis, angle) {
+    const rot = new Matrix4().setRotate(angle, ...axis);
+    const dir = this.getWorldDirection();
+    const fp = rot
+      .multiplyVector3(new Vector3([dir.x, dir.y, dir.z]))
+      .normalize().elements;
+    const e = this.eye.elements;
+    this.at.elements = [e[0] + fp[0], e[1] + fp[1], e[2] + fp[2]];
+    this.updateViewMatrix();
   }
 }
