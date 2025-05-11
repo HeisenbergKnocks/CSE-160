@@ -59,12 +59,14 @@ let u_ViewMatrix, u_ProjectionMatrix;
 let u_whichTexture;
 let u_Sampler0, u_Sampler1, u_Sampler2, u_Sampler3, u_Sampler4;
 
+let minimapCanvas, minimapCtx;
+
 // Constants for tile types and map dimensions
 const TILE_SKY = 0,
   TILE_AMETHYST = 1,
   TILE_BIRCH = 2,
   TILE_CHERRY_LEAVES = 3,
-  TILE_CYAN = 4;
+  TILE_ICE = 4;
 const MAP_SIZE = 32;
 
 // Application state for animations and input
@@ -152,13 +154,30 @@ function addUIControls() {
     }
   });
 
-  // Q/E block add/remove
+  // single keydown listener for block F/G and camera Q/E
   document.addEventListener("keydown", (e) => {
-    const target = getTargetColumn();
-    if (!target) return;
-    const column = g_worldGrid[target.z][target.x];
-    if (e.code === "KeyQ") column.push(TILE_AMETHYST);
-    if (e.code === "KeyE" && column.length) column.pop();
+    // --- place/remove blocks with F / G ---
+    if (e.code === "KeyF" || e.code === "KeyG") {
+      const target = getTargetColumn();
+      if (!target) return;
+      const column = g_worldGrid[target.z][target.x];
+      if (e.code === "KeyF") {
+        column.push(TILE_AMETHYST);
+      } else if (e.code === "KeyG" && column.length) {
+        column.pop();
+      }
+      renderScene();
+    }
+
+    /*
+    // --- yaw camera with Q / E ---
+    else if (e.code === "KeyQ") {
+      camera.yaw(5); // turn left
+      renderScene();
+    } else if (e.code === "KeyE") {
+      camera.yaw(-5); // turn right
+      renderScene();
+    } */
   });
 }
 
@@ -171,7 +190,7 @@ function initTextures() {
     "amethyst.png",
     "birch.png",
     "cherry_leaves.png",
-    "cyan.png",
+    "ice.png",
   ];
 
   sources.forEach((fileName, unit) => {
@@ -262,6 +281,8 @@ function main() {
   // Scroll to zoom
   canvas.addEventListener("wheel", handleMouseWheel, { passive: false });
   initTextures();
+  minimapCanvas = document.getElementById("minimap");
+  minimapCtx = minimapCanvas.getContext("2d");
   gl.clearColor(0, 0, 0, 1);
   requestAnimationFrame(tick);
 }
@@ -283,17 +304,19 @@ function tick() {
   const now = performance.now();
   const dt = (now - state.timers.lastFrame) / 1000;
   state.timers.lastFrame = now;
-  // Continuous WASD movement
+  // Continuous WASDQE movement
   if (state.keys.KeyW) camera.moveForward(dt);
   if (state.keys.KeyS) camera.moveBackward(dt);
   if (state.keys.KeyA) camera.moveLeft(dt);
   if (state.keys.KeyD) camera.moveRight(dt);
+  if (state.keys.KeyQ) camera.yaw(dt * 70);
+  if (state.keys.KeyE) camera.yaw(-dt * 70);
   renderScene();
   requestAnimationFrame(tick);
 }
 
 // build a 32×32 grid
-// after you’ve declared TILE_CYAN, TILE_AMETHYST, MAP_SIZE…
+// after you’ve declared TILE_ICE, TILE_AMETHYST, MAP_SIZE…
 // build a 32×32 grid from worldMap (all amethyst)
 
 // --- map generation: smooth hill ---
@@ -388,7 +411,7 @@ function drawMap(blockSize = 1) {
           target.z === z &&
           y === columnStack.length - 1
         ) {
-          texture = TILE_CYAN;
+          texture = TILE_ICE;
         }
 
         // Create a cube for this block and position it in world space
@@ -504,8 +527,8 @@ function renderScene() {
     const halfMap = MAP_SIZE / 2;
 
     const highlight = new Cube();
-    highlight.textureNum = -2; // use a solid color
-    highlight.color = [1, 1, 0, 0.4]; // yellow with 40% opacity
+    highlight.textureNum = -2; // default to no texture
+    highlight.color = [1, 1, 1, 0.2]; // white with 20% opacity
     highlight.matrix
       .setIdentity()
       .translate(x - halfMap + 0.5, y - 0.5, z - halfMap + 0.5)
@@ -520,6 +543,9 @@ function renderScene() {
     gl.enable(gl.DEPTH_TEST);
   }
 
+  // after all your 3D draws…
+  drawMiniMap(minimapCtx);
+
   // 7) Calculate and display frame time and FPS in the HUD
   const frameTime = performance.now() - frameStart;
   const fps = Math.floor(10000 / frameTime) / 10;
@@ -530,6 +556,30 @@ function renderScene() {
 function sendTextToHTML(text, htmlID) {
   const elm = document.getElementById(htmlID);
   if (elm) elm.innerHTML = text;
+}
+
+function drawMiniMap(ctx) {
+  const size = ctx.canvas.width; // assume square
+  const cell = (size / MAP_SIZE) | 0; // integer cell size
+  ctx.clearRect(0, 0, size, size);
+
+  for (let z = 0; z < MAP_SIZE; z++) {
+    for (let x = 0; x < MAP_SIZE; x++) {
+      // height = number of blocks in column
+      const h = g_worldGrid[z][x].length;
+      // map height → shade (1–6 → 40–255)
+      const shade = 40 + Math.floor((h / 6) * 215);
+      ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade})`;
+      ctx.fillRect(x * cell, z * cell, cell, cell);
+    }
+  }
+
+  // Optional: mark camera position
+  const half = MAP_SIZE / 2;
+  const px = ((camera.eye.elements[0] + half) / MAP_SIZE) * size;
+  const pz = ((camera.eye.elements[2] + half) / MAP_SIZE) * size;
+  ctx.fillStyle = "red";
+  ctx.fillRect(px - cell / 2, pz - cell / 2, cell, cell);
 }
 
 function drawAnimal(startMatrix) {

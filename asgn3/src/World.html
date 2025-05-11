@@ -2,142 +2,166 @@
 <html lang="en">
     <head>
         <meta charset="utf-8" />
-        <title>Change a point color</title>
+        <title>Blocky World</title>
+        <style>
+            /* Basic page reset */
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family: Arial, sans-serif;
+                /* a three‑stop "Ocean Depths" with a stronger contrast */
+                background: linear-gradient(
+                    135deg,
+                    #3a445e 0%,
+                    #5a8ea0 50%,
+                    #826f9a 100%
+                );
+                color: #333;
+                padding: 20px;
+            }
+            .container {
+                max-width: 800px;
+                margin: 0 auto;
+                text-align: center;
+            }
+            h1 {
+                margin-bottom: 20px;
+                font-size: 2rem;
+                color: #222;
+            }
+            /* Canvas styling */
+            #webgl,
+            #minimap {
+                border: 1px solid #ccc;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                border-radius: 4px;
+            }
+            /* Text box styling */
+            .textbox {
+                position: absolute;
+                top: 10px;
+                background: rgba(255, 255, 255, 0.2);
+                padding: 10px;
+                border-radius: 4px;
+                color: #fff;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                font-size: 0.9rem;
+                line-height: 1.4;
+            }
+            .controls-box {
+                left: -300px; /* halfway between canvas and page edge */
+                width: 170px;
+            }
+            .desc-box {
+                right: -330px; /* halfway between canvas and page edge */
+                width: 230px;
+            }
+            /* Slider styling */
+            .slider-container {
+                margin: 20px 0;
+                text-align: left;
+            }
+            label {
+                font-weight: bold;
+                display: block;
+                margin-bottom: 5px;
+            }
+            .slider {
+                width: 100%;
+                height: 6px;
+                border-radius: 3px;
+                background: #ddd;
+                outline: none;
+                -webkit-appearance: none;
+            }
+            .slider::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                background: #007bff;
+                cursor: pointer;
+                box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+            }
+        </style>
     </head>
     <body onload="main()">
-        <!-- Row 1: Canvas -->
-        <div style="margin-bottom: 10px">
-            <canvas id="webgl" width="600" height="600">
-                Please use a browser that supports "canvas"
-            </canvas>
-        </div>
-
-        <!-- Row 2: Dot Counter -->
-        <p id="numdot">XXX</p>
-
-        <!-- Row 4: Camera Angle -->
-        <div style="margin-bottom: 10px">
-            <label for="angleSlide">Camera Angle</label>
-            <input
-                type="range"
-                min="0"
-                max="360"
-                value="45"
-                class="slider"
-                id="angleSlide"
-            />
-        </div>
-
-        <!-- Row 5: Leg Sliders (flex layout to keep them aligned) -->
-        <div
-            style="
-                display: flex;
-                gap: 30px;
-                align-items: center;
-                margin-bottom: 10px;
-            "
-        >
-            <span style="display: flex; align-items: center; gap: 8px">
-                <label for="leg0Slide">Front-Right Leg</label>
+        <div class="container">
+            <h1>Blocky World</h1>
+            <!-- Canvas wrapper -->
+            <div
+                style="
+                    position: relative;
+                    display: inline-block;
+                    margin-bottom: 10px;
+                "
+            >
+                <canvas id="webgl" width="600" height="600">
+                    Please use a browser that supports "canvas"
+                </canvas>
+                <canvas
+                    id="minimap"
+                    width="200"
+                    height="200"
+                    style="
+                        position: absolute;
+                        top: 10px;
+                        right: 10px;
+                        background: rgba(0, 0, 0, 0.5);
+                        z-index: 10;
+                    "
+                >
+                </canvas>
+                <!-- Controls Text Box -->
+                <div class="textbox controls-box">
+                    <strong>Controls:</strong>
+                    <p>
+                        WASD &ndash; Move<br />
+                        Mouse &ndash; Look Around<br />
+                        Q &ndash; Pan Camera Left<br />
+                        E &ndash; Pan Camera Right<br />
+                        Scroll &ndash; Zoom Level
+                    </p>
+                </div>
+                <!-- Description Text Box -->
+                <div class="textbox desc-box">
+                    <strong>Meet Ayanokoji the sheep.</strong>
+                    <p>
+                        He currently sits at the bottom of the sheep hierarchy,
+                        in Class D. However, he looks up at the middle cube at
+                        the top of the mound, representing the top of Class A.
+                        He knows he will ascend the classes and dominate his
+                        fellow sheep to reach A, despite his current standing,
+                        as he was trained in the White Room since birth. As a
+                        result of the White Room along with his natural genius
+                        ability, there are no sheep that can stand on equal
+                        ground with him, intellectually or physically.
+                    </p>
+                </div>
+            </div>
+            <!-- Optional: dot counter if you still need it -->
+            <p id="numdot">XXX</p>
+            <!-- Only the Camera Angle slider remains -->
+            <div class="slider-container">
+                <label for="angleSlide">Camera Angle</label>
                 <input
                     type="range"
-                    min="-25"
-                    max="20"
-                    value="0"
+                    min="0"
+                    max="360"
+                    value="45"
                     class="slider"
-                    id="leg0Slide"
+                    id="angleSlide"
                 />
-            </span>
-
-            <span style="display: flex; align-items: center; gap: 8px">
-                <label for="leg1Slide">Back-Right Leg</label>
-                <input
-                    type="range"
-                    min="-25"
-                    max="20"
-                    value="0"
-                    class="slider"
-                    id="leg1Slide"
-                />
-            </span>
-
-            <span style="display: flex; align-items: center; gap: 8px">
-                <label for="leg2Slide">Front-Left Leg</label>
-                <input
-                    type="range"
-                    min="-25"
-                    max="20"
-                    value="0"
-                    class="slider"
-                    id="leg2Slide"
-                />
-            </span>
-
-            <span style="display: flex; align-items: center; gap: 8px">
-                <label for="leg3Slide">Back-Left Leg</label>
-                <input
-                    type="range"
-                    min="-25"
-                    max="20"
-                    value="0"
-                    class="slider"
-                    id="leg3Slide"
-                />
-            </span>
+            </div>
         </div>
-
-        <!-- Head slider in the body of BlockyAnimal.html -->
-        <div style="margin-bottom: 10px">
-            <label for="headTiltSlide">Head Tilt (Side-to-Side)</label>
-            <input
-                type="range"
-                min="-7"
-                max="25"
-                value="0"
-                class="slider"
-                id="headTiltSlide"
-            />
-        </div>
-
-        <!-- Row 6: Lower-Stout (Jaw) Slider -->
-        <div style="margin-bottom: 10px">
-            <label for="stoutSlide">Lower Stout Angle</label>
-            <input
-                type="range"
-                id="stoutSlide"
-                class="slider"
-                min="-35"
-                max="-6"
-                step="0.1"
-                value="-12.5"
-            />
-        </div>
-
-        <!-- Row 7: Tongue Slider -->
-        <div style="margin-bottom: 10px">
-            <label for="tongueSlide">Tongue Angle</label>
-            <input
-                type="range"
-                id="tongueSlide"
-                class="slider"
-                min="-32"
-                max="-6"
-                step="0.1"
-                value="-12.5"
-            />
-        </div>
-
-        <!-- Walk Animation Button -->
-        <div style="margin-top: 10px">
-            <button id="walkButton">Toggle Walk Animation</button>
-        </div>
-
-        <!-- Scripts -->
+        <!-- Scripts (unchanged) -->
         <script src="../lib/webgl-utils.js"></script>
         <script src="../lib/webgl-debug.js"></script>
         <script src="../lib/cuon-utils.js"></script>
         <script src="../lib/cuon-matrix.js"></script>
-        <!-- <img src="../images/sky.jpg" alt="Sky background" /> -->
         <script src="Triangle.js"></script>
         <script src="Cube.js"></script>
         <script src="Camera.js"></script>
