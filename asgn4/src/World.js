@@ -210,6 +210,13 @@ function addUIControls() {
     g_lightOn = false;
   };
 
+  document.getElementById("spotOn").onclick = function () {
+    g_spotOn = true;
+  };
+  document.getElementById("spotOff").onclick = function () {
+    g_spotOn = false;
+  };
+
   // Angle slider feeds into camera yaw
   let lastSlider = 0;
   document.getElementById("angleSlide").addEventListener("input", (e) => {
