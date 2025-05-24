@@ -38,6 +38,12 @@ const FSHADER_SOURCE = `
   uniform vec3 u_lightColor;
   varying vec4 v_VertPos;
   uniform bool u_lightOn;
+
+  uniform bool  u_spotOn;
+  uniform vec3  u_spotPos;
+  uniform vec3  u_spotDir;
+  uniform float u_spotCutoff;
+
   void main() {
 
     if (u_whichTexture == -2) {
@@ -82,15 +88,32 @@ const FSHADER_SOURCE = `
 
     vec3 diffuse = u_lightColor * vec3(gl_FragColor) * nDotL * 0.7;
     vec3 ambient = vec3(gl_FragColor) * 0.2;
-    if(u_lightOn) {
-      if(u_whichTexture == 0) {
-        gl_FragColor = vec4(specular+diffuse+ambient, 1.0);
-      } else {
-        gl_FragColor = vec4(diffuse+ambient, 1.0);
+
+    // --- Spotlight contribution (diffuse only) ---
+    vec3 spotContribution = vec3(0.0);
+    if (u_spotOn) {
+      // direction from light to fragment
+      vec3 Ls      = normalize(u_spotPos - vec3(v_VertPos));
+      float nDotLs = max(dot(N, Ls), 0.0);
+
+      // check cone angle
+      vec3 fragDir = normalize(vec3(v_VertPos) - u_spotPos);
+      float theta  = dot(fragDir, normalize(u_spotDir));
+      if (theta > u_spotCutoff) {
+        float intensity  = pow(theta, 10.0);
+        // only diffuse term, no specular
+        spotContribution = u_lightColor * vec3(gl_FragColor) * nDotLs * 0.7 * intensity;
       }
     }
 
-  }`;
+    if (u_lightOn) {
+      if (u_whichTexture == 0) {
+        gl_FragColor = vec4(specular + diffuse + ambient + spotContribution, 1.0);
+      } else {
+        gl_FragColor = vec4(diffuse + ambient + spotContribution, 1.0);
+      }
+    }
+}`;
 
 /*
 vec3 lightVector = vec3(v_VertPos)-u_lightPos;
@@ -122,7 +145,18 @@ let u_lightPos;
 let u_cameraPos;
 let g_lightPos = [0, 1, -2];
 
-let g_lightColor = [2.0, 2.0, 0.0];
+let g_lightColor = [2.0, 2.0, 2.0];
+
+// Spotlight settings
+let g_spotOn = true;
+let g_spotPos = [0, 3, 6]; // centered on the front wall
+let g_spotDir = [0, -3, -6]; // pointing down‐into the room
+let g_spotCutoff = Math.cos((20 * Math.PI) / 180); // 20° cone
+
+let u_spotOn;
+let u_spotPos;
+let u_spotDir;
+let u_spotCutoff;
 
 // Constants for tile types and map dimensions
 const TILE_SKY = 0,
@@ -177,8 +211,13 @@ function connectShaders() {
 
   u_lightOn = gl.getUniformLocation(gl.program, "u_lightOn");
   u_lightColor = gl.getUniformLocation(gl.program, "u_lightColor");
-
   u_lightPos = gl.getUniformLocation(gl.program, "u_lightPos");
+
+  u_spotOn = gl.getUniformLocation(gl.program, "u_spotOn");
+  u_spotPos = gl.getUniformLocation(gl.program, "u_spotPos");
+  u_spotDir = gl.getUniformLocation(gl.program, "u_spotDir");
+  u_spotCutoff = gl.getUniformLocation(gl.program, "u_spotCutoff");
+
   u_cameraPos = gl.getUniformLocation(gl.program, "u_cameraPos");
   u_Sampler0 = gl.getUniformLocation(gl.program, "u_Sampler0");
   u_Sampler1 = gl.getUniformLocation(gl.program, "u_Sampler1");
@@ -583,6 +622,11 @@ function renderScene() {
 
   // Pass the slider-tweaked RGB into the shader
   gl.uniform3f(u_lightColor, g_lightColor[0], g_lightColor[1], g_lightColor[2]);
+
+  gl.uniform1i(u_spotOn, g_spotOn);
+  gl.uniform3f(u_spotPos, g_spotPos[0], g_spotPos[1], g_spotPos[2]);
+  gl.uniform3f(u_spotDir, g_spotDir[0], g_spotDir[1], g_spotDir[2]);
+  gl.uniform1f(u_spotCutoff, g_spotCutoff);
 
   // Draw the light
   var light = new Cube();
