@@ -1,5 +1,5 @@
 class Sphere {
-  constructor(textureUnit = 0, angleStep = Math.PI / 20) {
+  constructor(textureUnit = -2, angleStep = Math.PI / 20) {
     this.type = "sphere";
     this.color = [1, 1, 1, 1]; // Fallback RGBA when untextured
     this.textureNum = textureUnit; // e.g. 0 for checker texture bound to TEXTURE0

@@ -107,7 +107,7 @@ const FSHADER_SOURCE = `
     }
 
     if (u_lightOn) {
-      if (u_whichTexture == 0) {
+      if (u_whichTexture == 0 || u_whichTexture == 4) {
         gl_FragColor = vec4(specular + diffuse + ambient + spotContribution, 1.0);
       } else {
         gl_FragColor = vec4(diffuse + ambient + spotContribution, 1.0);
@@ -148,7 +148,7 @@ let g_lightPos = [0, 1, -2];
 let g_lightColor = [2.0, 2.0, 2.0];
 
 // Spotlight settings
-let g_spotOn = true;
+let g_spotOn = false;
 let g_spotPos = [0, 3, 6]; // centered on the front wall
 let g_spotDir = [0, -3, -6]; // pointing down‐into the room
 let g_spotCutoff = Math.cos((20 * Math.PI) / 180); // 20° cone
@@ -645,7 +645,7 @@ function renderScene() {
 
   // 5) Draw sphere
   var sp = new Sphere();
-
+  sp.textureNum = 0;
   if (g_normalOn) sp.textureNum = -3;
   sp.matrix.translate(0.6, 1.3, 0);
   sp.render();
