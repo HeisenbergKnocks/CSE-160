@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Three.js Park Scene</title>
+        <style>
+            body {
+                margin: 0;
+                overflow: hidden;
+            }
+            canvas {
+                display: block;
+            }
+        </style>
+        <!-- IMPORTANT: Import map MUST come BEFORE your module script -->
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+                }
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Load our “world.js” as an ES module -->
+        <script type="module" src="world.js"></script>
+    </body>
+</html>
